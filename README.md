@@ -33,3 +33,4 @@ API: http://localhost:8080/api/schedule
 ├── src/                 # Java-исходники
 └── frontend/            # клонируется из teacher-frontend
 ```
+# Admin panel
