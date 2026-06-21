@@ -2,7 +2,6 @@ package com.teacher.data;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.teacher.model.*;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
@@ -19,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class FileStorage {
 
     private final Path dataDir = Path.of("/data");
-    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final ObjectMapper mapper = new ObjectMapper();
 
     private final List<ScheduleItem> schedule = new CopyOnWriteArrayList<>();
     private final List<Material> materials = new CopyOnWriteArrayList<>();
@@ -40,16 +39,16 @@ public class FileStorage {
         }
     }
 
-    private <T> List<T> loadList(String filename, List<T> defaults) {
+    private <T> List<T> loadList(String filename, Class<T> elementType) {
         File file = dataDir.resolve(filename).toFile();
         if (file.exists()) {
             try {
                 return mapper.readValue(file, new TypeReference<List<T>>() {});
             } catch (IOException e) {
-                System.err.println("Failed to load " + filename + ", using defaults: " + e.getMessage());
+                System.err.println("Failed to load " + filename + ": " + e.getMessage());
             }
         }
-        return defaults;
+        return new ArrayList<>();
     }
 
     private void saveList(String filename, Object list) {
@@ -60,19 +59,13 @@ public class FileStorage {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private void loadAll() {
-        List<ScheduleItem> defSchedule = defaultSchedule();
-        List<Material> defMaterials = defaultMaterials();
-        List<Homework> defHomeworks = defaultHomeworks();
-        List<BlogPost> defBlog = defaultBlog();
+        schedule.addAll((List)loadList("schedule.json", ScheduleItem.class));
+        materials.addAll((List)loadList("materials.json", Material.class));
+        homeworks.addAll((List)loadList("homework.json", Homework.class));
+        blogPosts.addAll((List)loadList("blog.json", BlogPost.class));
 
-        schedule.addAll(loadList("schedule.json", defSchedule));
-        materials.addAll(loadList("materials.json", defMaterials));
-        homeworks.addAll(loadList("homework.json", defHomeworks));
-        blogPosts.addAll(loadList("blog.json", defBlog));
-
-        // Recalculate IDs
         materialId.set(materials.stream().mapToLong(Material::getId).max().orElse(0) + 1);
         homeworkId.set(homeworks.stream().mapToLong(Homework::getId).max().orElse(0) + 1);
         blogId.set(blogPosts.stream().mapToLong(BlogPost::getId).max().orElse(0) + 1);
@@ -84,14 +77,7 @@ public class FileStorage {
     public void saveSchedule(List<ScheduleItem> items) {
         schedule.clear();
         schedule.addAll(items);
-        saveList("schedule.json", items);
-    }
-
-    public void updateScheduleItem(int index, ScheduleItem item) {
-        if (index >= 0 && index < schedule.size()) {
-            schedule.set(index, item);
-            saveList("schedule.json", new ArrayList<>(schedule));
-        }
+        saveList("schedule.json", new ArrayList<>(schedule));
     }
 
     // === Materials ===
@@ -170,54 +156,5 @@ public class FileStorage {
     public void deleteBlogPost(Long id) {
         blogPosts.removeIf(b -> b.getId().equals(id));
         saveList("blog.json", new ArrayList<>(blogPosts));
-    }
-
-    // === Default data (seeded on first run) ===
-    private List<ScheduleItem> defaultSchedule() {
-        return List.of(
-            new ScheduleItem("Понедельник", "8:30–9:15", "7А", ""),
-            new ScheduleItem("Понедельник", "9:25–10:10", "8Б", ""),
-            new ScheduleItem("Понедельник", "10:25–11:10", "9В", ""),
-            new ScheduleItem("Понедельник", "11:30–12:15", "10А", ""),
-            new ScheduleItem("Вторник", "8:30–9:15", "7Б", ""),
-            new ScheduleItem("Вторник", "9:25–10:10", "8А", ""),
-            new ScheduleItem("Вторник", "14:00–15:30", "", "Факультатив: Python"),
-            new ScheduleItem("Среда", "9:25–10:10", "9А", ""),
-            new ScheduleItem("Среда", "10:25–11:10", "10Б", ""),
-            new ScheduleItem("Среда", "11:30–12:15", "11А", ""),
-            new ScheduleItem("Четверг", "8:30–9:15", "7В", ""),
-            new ScheduleItem("Четверг", "9:25–10:10", "8Б", ""),
-            new ScheduleItem("Четверг", "14:00–15:30", "", "Консультация"),
-            new ScheduleItem("Пятница", "8:30–9:15", "9В", ""),
-            new ScheduleItem("Пятница", "9:25–10:10", "10А", ""),
-            new ScheduleItem("Пятница", "10:25–11:10", "11Б", "")
-        );
-    }
-
-    private List<Material> defaultMaterials() {
-        return List.of(
-            new Material(1L, "Основы алгоритмизации", "Презентация · 9 класс", "/files/algo.pdf", "Презентации"),
-            new Material(2L, "Python: введение", "Конспект · 10 класс", "/files/python-intro.pdf", "Конспекты"),
-            new Material(3L, "Системы счисления", "Презентация · 8 класс", "/files/num-sys.pdf", "Презентации"),
-            new Material(4L, "Базы данных: SQL", "Материалы · 11 класс", "/files/sql.pdf", "Материалы")
-        );
-    }
-
-    private List<Homework> defaultHomeworks() {
-        return List.of(
-            new Homework(1L, "7 классы", "до 20.06", "Задание 15 в рабочей тетради."),
-            new Homework(2L, "8 классы", "до 21.06", "Калькулятор на Python."),
-            new Homework(3L, "9 классы", "до 22.06", "Подготовка к контрольной."),
-            new Homework(4L, "10 классы", "до 23.06", "SQL запросы."),
-            new Homework(5L, "11 классы", "до 24.06", "ЕГЭ вариант 23.")
-        );
-    }
-
-    private List<BlogPost> defaultBlog() {
-        return List.of(
-            new BlogPost(1L, "Контрольная по системам счисления", "12 июня 2026", "На следующей неделе у 9-х классов контрольная.", "Полный текст..."),
-            new BlogPost(2L, "Олимпиада по программированию", "5 июня 2026", "Запись на школьный этап открыта.", "Полный текст..."),
-            new BlogPost(3L, "Почему Python — это не страшно", "28 мая 2026", "Рассказываю, с чего начать.", "Полный текст...")
-        );
     }
 }

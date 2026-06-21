@@ -1,6 +1,6 @@
 package com.teacher.controller;
 
-import com.teacher.auth.AuthFilter;
+import com.teacher.auth.CredentialStore;
 import com.teacher.data.FileStorage;
 import com.teacher.model.*;
 import org.springframework.web.bind.annotation.*;
@@ -12,15 +12,37 @@ import java.util.*;
 public class AdminController {
 
     private final FileStorage storage;
+    private final CredentialStore credentialStore;
 
-    public AdminController(FileStorage storage) {
+    public AdminController(FileStorage storage, CredentialStore credentialStore) {
         this.storage = storage;
+        this.credentialStore = credentialStore;
     }
 
     // === Auth ===
+    @PostMapping("/setup")
+    public Map<String, Object> setup(@RequestBody Map<String, String> body) {
+        if (credentialStore.isSetup()) {
+            return Map.of("error", "Already configured");
+        }
+        String login = body.get("login");
+        String password = body.get("password");
+        if (login == null || password == null || login.isBlank() || password.length() < 4) {
+            return Map.of("error", "Login and password required (min 4 chars)");
+        }
+        credentialStore.setup(login, password);
+        String token = credentialStore.login(login, password);
+        return Map.of("token", token, "status", "ok");
+    }
+
+    @GetMapping("/status")
+    public Map<String, Object> status() {
+        return Map.of("setup", credentialStore.isSetup());
+    }
+
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody Map<String, String> body) {
-        String token = AuthFilter.login(body.get("login"), body.get("password"));
+        String token = credentialStore.login(body.get("login"), body.get("password"));
         if (token == null) {
             return Map.of("error", "Invalid credentials");
         }
@@ -29,7 +51,7 @@ public class AdminController {
 
     @PostMapping("/logout")
     public Map<String, String> logout(@RequestHeader("X-Admin-Token") String token) {
-        AuthFilter.logout(token);
+        credentialStore.logout(token);
         return Map.of("status", "ok");
     }
 
