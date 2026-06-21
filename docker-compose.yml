@@ -9,10 +9,16 @@ services:
       - ./frontend:/usr/share/nginx/html:ro
     depends_on:
       - backend
+    restart: unless-stopped
 
   backend:
     build: .
     container_name: teacher-backend
     expose:
       - "8080"
+    volumes:
+      - teacher-data:/data
     restart: unless-stopped
+
+volumes:
+  teacher-data:

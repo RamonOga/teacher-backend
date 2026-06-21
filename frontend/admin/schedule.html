@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Расписание · Админка</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+  <div class="header">
+    <h1>📅 Редактор расписания</h1>
+    <a href="/admin/">← Назад</a>
+  </div>
+  <main>
+    <div id="items"></div>
+    <button class="btn" onclick="add()">+ Добавить</button>
+  </main>
+  <script>
+    const TOKEN = localStorage.getItem('admin-token');
+    if (!TOKEN) { window.location.href = '/admin/login'; }
+
+    async function load() {
+      const res = await fetch('/api/admin/schedule', { headers: { 'X-Admin-Token': TOKEN } });
+      const data = await res.json();
+      render(data);
+    }
+
+    function render(data) {
+      const div = document.getElementById('items');
+      div.innerHTML = data.map((item, i) => `
+        <div class="item">
+          <select onchange="edit(${i},'day',this.value)">${['Понедельник','Вторник','Среда','Четверг','Пятница'].map(d => '<option'+(d===item.day?' selected':'')+'>'+d+'</option>').join('')}</select>
+          <input value="${item.time||''}" placeholder="Время" onchange="edit(${i},'time',this.value)">
+          <input value="${item.group||''}" placeholder="Класс" onchange="edit(${i},'group',this.value)">
+          <input value="${item.note||''}" placeholder="Примечание" onchange="edit(${i},'note',this.value)">
+        </div>
+      `).join('');
+    }
+
+    async function edit(idx, field, value) {
+      const res = await fetch('/api/admin/schedule', { headers: { 'X-Admin-Token': TOKEN } });
+      let data = await res.json();
+      data[idx][field] = value;
+      await fetch('/api/admin/schedule', {
+        method: 'PUT',
+        headers: { 'X-Admin-Token': TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
+    async function add() {
+      const res = await fetch('/api/admin/schedule', { headers: { 'X-Admin-Token': TOKEN } });
+      let data = await res.json();
+      data.push({ day: 'Понедельник', time: '', group: '', note: '' });
+      await fetch('/api/admin/schedule', {
+        method: 'PUT',
+        headers: { 'X-Admin-Token': TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>

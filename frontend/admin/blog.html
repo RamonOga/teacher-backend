@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Блог · Админка</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+  <div class="header">
+    <h1>📰 Редактор блога</h1>
+    <a href="/admin/">← Назад</a>
+  </div>
+  <main>
+    <div id="items"></div>
+    <button class="btn" onclick="add()">+ Новая запись</button>
+  </main>
+  <script>
+    const TOKEN = localStorage.getItem('admin-token');
+    if (!TOKEN) { window.location.href = '/admin/login'; }
+
+    let _data = [];
+
+    async function load() {
+      const res = await fetch('/api/admin/blog', { headers: { 'X-Admin-Token': TOKEN } });
+      _data = await res.json();
+      render();
+    }
+
+    function render() {
+      document.getElementById('items').innerHTML = _data.map(p => `
+        <div class="item" style="flex-direction:column;align-items:stretch">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input value="${p.title}" placeholder="Заголовок" onchange="set(${p.id},'title',this.value)" style="flex:3;min-width:150px">
+            <input value="${p.date}" placeholder="Дата" onchange="set(${p.id},'date',this.value)" style="flex:1;min-width:100px">
+            <button class="btn-del" onclick="del(${p.id})">✕</button>
+          </div>
+          <div class="label">Краткое описание</div>
+          <textarea placeholder="Краткое описание" onchange="set(${p.id},'excerpt',this.value)">${p.excerpt}</textarea>
+          <div class="label">Полный текст</div>
+          <textarea placeholder="Полный текст" onchange="set(${p.id},'content',this.value)">${p.content}</textarea>
+        </div>
+      `).join('');
+    }
+
+    function set(id, field, value) {
+      const item = _data.find(p => p.id === id);
+      if (item) { item[field] = value; save(id); }
+    }
+
+    async function save(id) {
+      const item = _data.find(p => p.id === id);
+      if (!item) return;
+      await fetch('/api/admin/blog/'+id, {
+        method: 'PUT',
+        headers: { 'X-Admin-Token': TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(item)
+      });
+    }
+
+    async function del(id) {
+      if (!confirm('Удалить?')) return;
+      await fetch('/api/admin/blog/'+id, { method: 'DELETE', headers: { 'X-Admin-Token': TOKEN } });
+      load();
+    }
+
+    async function add() {
+      await fetch('/api/admin/blog', {
+        method: 'POST',
+        headers: { 'X-Admin-Token': TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Новая запись', date: new Date().toLocaleDateString('ru-RU'), excerpt: '', content: '' })
+      });
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>

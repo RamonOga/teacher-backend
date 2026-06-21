@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админка · Учитель информатики</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+    .header {
+      background: #0d0d14;
+      border-bottom: 1px solid #1e1e2e;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 { font-size: 1rem; color: #00d4ff; }
+    .header a { color: #8888a0; font-size: 0.85rem; text-decoration: none; }
+    .header a:hover { color: #00ff88; }
+    .grid {
+      max-width: 960px;
+      margin: 40px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: #14141c;
+      border: 1px solid #1e1e2e;
+      border-radius: 10px;
+      padding: 24px;
+      text-align: center;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: #00d4ff; }
+    .card h2 { font-size: 1.5rem; margin-bottom: 6px; }
+    .card p { color: #8888a0; font-size: 0.85rem; margin-bottom: 16px; }
+    .card a {
+      display: inline-block;
+      padding: 8px 20px;
+      background: #00d4ff;
+      color: #000;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .card a:hover { background: #00ff88; }
+    .section-title {
+      max-width: 960px;
+      margin: 20px auto 0;
+      padding: 0 20px;
+      font-size: 0.85rem;
+      color: #8888a0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚙ Панель управления</h1>
+    <a href="#" id="logout">Выйти</a>
+  </div>
+  <p class="section-title">Разделы сайта</p>
+  <div class="grid">
+    <div class="card">
+      <h2>📅</h2>
+      <p>Расписание уроков</p>
+      <a href="/admin/schedule">Редактировать</a>
+    </div>
+    <div class="card">
+      <h2>📚</h2>
+      <p>Учебные материалы</p>
+      <a href="/admin/materials">Редактировать</a>
+    </div>
+    <div class="card">
+      <h2>📝</h2>
+      <p>Домашние задания</p>
+      <a href="/admin/homework">Редактировать</a>
+    </div>
+    <div class="card">
+      <h2>📰</h2>
+      <p>Блог и новости</p>
+      <a href="/admin/blog">Редактировать</a>
+    </div>
+  </div>
+  <script>
+    (function() {
+      if (!localStorage.getItem('admin-token')) { window.location.href = '/admin/login'; return; }
+    })();
+    document.getElementById('logout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: { 'X-Admin-Token': localStorage.getItem('admin-token') }
+      });
+      localStorage.removeItem('admin-token');
+      window.location.href = '/admin/login';
+    });
+  </script>
+</body>
+</html>

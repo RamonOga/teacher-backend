@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ДЗ · Админка</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+  <div class="header">
+    <h1>📝 Редактор домашних заданий</h1>
+    <a href="/admin/">← Назад</a>
+  </div>
+  <main>
+    <div id="items"></div>
+    <button class="btn" onclick="add()">+ Добавить ДЗ</button>
+  </main>
+  <script>
+    const TOKEN = localStorage.getItem('admin-token');
+    if (!TOKEN) { window.location.href = '/admin/login'; }
+
+    let _data = [];
+
+    async function load() {
+      const res = await fetch('/api/admin/homework', { headers: { 'X-Admin-Token': TOKEN } });
+      _data = await res.json();
+      render();
+    }
+
+    function render() {
+      document.getElementById('items').innerHTML = _data.map(h => `
+        <div class="item" style="flex-direction:column;align-items:stretch">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input value="${h.group}" placeholder="Класс" onchange="set(${h.id},'group',this.value)" style="flex:1;min-width:100px">
+            <input value="${h.deadline}" placeholder="Срок" onchange="set(${h.id},'deadline',this.value)" style="flex:1;min-width:100px">
+            <button class="btn-del" onclick="del(${h.id})">✕</button>
+          </div>
+          <textarea placeholder="Описание" onchange="set(${h.id},'description',this.value)">${h.description}</textarea>
+        </div>
+      `).join('');
+    }
+
+    function set(id, field, value) {
+      const item = _data.find(h => h.id === id);
+      if (item) { item[field] = value; save(id); }
+    }
+
+    async function save(id) {
+      const item = _data.find(h => h.id === id);
+      if (!item) return;
+      await fetch('/api/admin/homework/'+id, {
+        method: 'PUT',
+        headers: { 'X-Admin-Token': TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(item)
+      });
+    }
+
+    async function del(id) {
+      if (!confirm('Удалить?')) return;
+      await fetch('/api/admin/homework/'+id, { method: 'DELETE', headers: { 'X-Admin-Token': TOKEN } });
+      load();
+    }
+
+    async function add() {
+      const res = await fetch('/api/admin/homework', {
+        method: 'POST',
+        headers: { 'X-Admin-Token': TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group: 'Новый класс', deadline: 'до дд.мм', description: '' })
+      });
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>
