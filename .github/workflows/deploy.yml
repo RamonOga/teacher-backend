@@ -3,6 +3,7 @@ name: Deploy backend
 on:
   push:
     branches: [main]
+  pull_request:
 
 jobs:
   build-and-deploy:
@@ -21,9 +22,10 @@ jobs:
         run: mvn package -DskipTests -q
 
       - name: Copy files to server
+        if: github.event_name == 'push'
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 167.17.180.127
+          host: 104.143.205.93
           username: root
           key: ${{ secrets.DEPLOY_KEY }}
           source: "target/*.jar,docker-compose.yml,Dockerfile,nginx.conf"
@@ -31,9 +33,10 @@ jobs:
           strip_components: 0
 
       - name: Restart containers
+        if: github.event_name == 'push'
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 167.17.180.127
+          host: 104.143.205.93
           username: root
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
