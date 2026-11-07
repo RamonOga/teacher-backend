@@ -1,6 +1,5 @@
 package com.teacher.data;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.teacher.model.*;
 import jakarta.annotation.PostConstruct;
@@ -43,7 +42,8 @@ public class FileStorage {
         File file = dataDir.resolve(filename).toFile();
         if (file.exists()) {
             try {
-                return mapper.readValue(file, new TypeReference<List<T>>() {});
+                return mapper.readValue(file,
+                        mapper.getTypeFactory().constructCollectionType(List.class, elementType));
             } catch (IOException e) {
                 System.err.println("Failed to load " + filename + ": " + e.getMessage());
             }
@@ -59,12 +59,11 @@ public class FileStorage {
         }
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     private void loadAll() {
-        schedule.addAll((List)loadList("schedule.json", ScheduleItem.class));
-        materials.addAll((List)loadList("materials.json", Material.class));
-        homeworks.addAll((List)loadList("homework.json", Homework.class));
-        blogPosts.addAll((List)loadList("blog.json", BlogPost.class));
+        schedule.addAll(loadList("schedule.json", ScheduleItem.class));
+        materials.addAll(loadList("materials.json", Material.class));
+        homeworks.addAll(loadList("homework.json", Homework.class));
+        blogPosts.addAll(loadList("blog.json", BlogPost.class));
 
         materialId.set(materials.stream().mapToLong(Material::getId).max().orElse(0) + 1);
         homeworkId.set(homeworks.stream().mapToLong(Homework::getId).max().orElse(0) + 1);
