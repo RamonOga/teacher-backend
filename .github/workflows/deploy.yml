@@ -40,6 +40,8 @@ jobs:
           username: root
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
+            set -e
             cd /opt/teacher/teacher-backend
             docker-compose up --build -d
+            docker-compose restart nginx
             docker system prune -f
