@@ -25,8 +25,8 @@ jobs:
         if: github.event_name == 'push'
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 104.143.205.93
-          username: root
+          host: 192.144.15.170
+          username: user33
           key: ${{ secrets.DEPLOY_KEY }}
           source: "target/*.jar,docker-compose.yml,Dockerfile,nginx.conf"
           target: "/opt/teacher/teacher-backend"
@@ -36,12 +36,12 @@ jobs:
         if: github.event_name == 'push'
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 104.143.205.93
-          username: root
+          host: 192.144.15.170
+          username: user33
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
             set -e
             cd /opt/teacher/teacher-backend
-            docker-compose up --build -d
-            docker-compose restart nginx
-            docker system prune -f
+            docker compose up --build -d
+            docker compose restart nginx
+            docker image prune -f --filter "label=com.docker.compose.project=teacher-backend" || true
